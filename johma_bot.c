@@ -10,6 +10,7 @@ g_app_id = 0;
 
 json_object_j
 json_obj = {
+    .channel_id = NULL,
     .api_key = NULL,
     .service = NULL,
 };
@@ -49,6 +50,13 @@ on_ready(struct discord *client,const struct discord_ready *event) {
     log_info("Logged in as %s!", event->user->username);
 
     g_app_id = event->application->id;
+
+    int result = load_watch_dogs();
+    if (result == GENERAL_SUCCESS) {
+        get_watch_dogs_debug();
+    } else {
+        log_error("watch_dogsの読み込みに失敗しました");
+    }
 }
 
 Vector* commands_vec = NULL;
@@ -178,6 +186,7 @@ on_interaction(struct discord *client, const struct discord_interaction *event) 
        log_info("file_status: %d", file_status);       
 
        if (file_status == GENERAL_NOT_EXISTS) {
+            json_obj.channel_id = channel_id;
             json_obj.api_key = api_key;
             json_obj.service = service;
 
@@ -188,14 +197,19 @@ on_interaction(struct discord *client, const struct discord_interaction *event) 
         } else if (file_status == GENERAL_EXISTS)
         {
             log_info("ファイルが存在します。更新を開始します");
-            json_obj.api_key = api_key;
-            json_obj.service = service;
+            json_obj.channel_id = channel_id;
+            json_obj.api_key = strdup(api_key);
+            json_obj.service = strdup(service);
 
         if (write_json(full_path, &json_obj) != GENERAL_SUCCESS) {
+        free(json_obj.api_key);
+        free(json_obj.service);    
         log_error("JSONファイルの更新に失敗しました");
         goto error_end;
 
         }
+        free(json_obj.api_key);
+        free(json_obj.service);
         log_info("JSONファイルを更新しました: %s", full_path);
         } else {
            log_error("予期せぬエラーが発生しました");
@@ -222,6 +236,30 @@ on_interaction(struct discord *client, const struct discord_interaction *event) 
     
 }
 
+void
+on_message_create(struct discord *client, const struct discord_message *msg) {
+    log_info("on_message_createを開始します");
+    for (size_t i = 0; i < watch_dogs_vec->size; i++) {
+        char *file_path = vector_get(watch_dogs_vec, i);
+        if (!file_path) continue;
+
+        json_object_j* result = get_json_object(file_path);
+        if (!result || !result->channel_id) continue;
+
+        unsigned long channel_id = strtoul((const char*)result->channel_id, NULL, 10);
+
+        if (channel_id == msg->channel_id) {
+            log_info("チャンネルが一致しました");
+            log_info("メッセージ内容: %s", msg->content);
+        }
+
+        free(result->api_key);
+        free(result->service);
+        free(result->channel_id);
+        free(result);
+    }
+}
+
 int 
 main(int argc, char *argv[]) {
     
@@ -238,8 +276,12 @@ main(int argc, char *argv[]) {
     struct discord *client = discord_config_init(config_file);
     assert(NULL != client && "Could not initialize client");
 
+    discord_add_intents(client, DISCORD_GATEWAY_MESSAGE_CONTENT | DISCORD_GATEWAY_GUILD_MESSAGES | DISCORD_GATEWAY_GUILDS);
+    discord_set_on_message_create(client, &on_message_create);
+
     discord_set_on_command(client,"jm!" ,&on_slash_command_create);
     discord_set_on_ready(client, &on_ready);
+    
     discord_set_on_interaction_create(client, &on_interaction);
 
     discord_run(client);

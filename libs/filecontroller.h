@@ -26,4 +26,7 @@ create_json(const char* file_path);
 int
 write_json(const char* file_path, json_object_j *json);
 
+json_object_j*
+get_json_object(const char* file_path);
+
 #endif

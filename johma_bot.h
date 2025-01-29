@@ -16,8 +16,9 @@
 #include <errno.h>
 #include <unistd.h>
 #include <limits.h>
+#include <stdint.h>
 #include "include/json_type.h"
-
+#include "include/vector.h"
 
 typedef enum {
     GENERAL_NOT_EXISTS = -2,
@@ -31,19 +32,6 @@ typedef enum {
 } Command_type;
 
 extern u64snowflake g_app_id;
-
-typedef struct {
-    void** data;
-    size_t size;
-    size_t capacity;
-} Vector;
-
-Vector* vector_create(void);
-
-void vector_push(Vector* vec, void* data);
-
-void* vector_get(Vector* vec, size_t index);
-void vector_free(Vector* vec);
 
 void on_ready(struct discord *client,const struct discord_ready *event);
 void on_interaction(struct discord *client, const struct discord_interaction *event);

@@ -34,7 +34,17 @@ build:
 	$(CC) obj/libs/filecontroller.o obj/commands/watch_dogs.o obj/johma_bot.o obj/cJSON.o -o $(TARGET) $(CFLAGS) $(LIBS)
 
 run: $(TARGET)
-	./$(TARGET)	
+	./$(TARGET)
+
+re:
+	$(MAKE) clean
+	$(MAKE) build
+	$(MAKE) run
+
+rem:
+	$(MAKE) clean
+	$(MAKE) build
+	$(MAKE) mem	
 
 mem: $(TARGET)
 	valgrind --leak-check=full --show-leak-kinds=all ./$(TARGET)
