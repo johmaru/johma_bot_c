@@ -18,13 +18,22 @@ int
 watch_dogs_dir_check(void);
 
 int
+data_dir_check(void);
+
+int
 watch_dogs_file_check(const char* file_path);
+
+int
+data_file_check(const char* file_path);
 
 int
 create_json(const char* file_path);
 
 int
 write_json(const char* file_path, json_object_j *json);
+
+int
+write_append_txt(const char* file_path, const char* data);
 
 json_object_j*
 get_json_object(const char* file_path);

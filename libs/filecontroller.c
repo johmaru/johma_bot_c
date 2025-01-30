@@ -22,7 +22,47 @@ watch_dogs_dir_check() {
 }
 
 int
+data_dir_check() {
+    struct stat st = {0};
+    if (stat("data", &st) == 0) {
+        log_info("ディレクトリが既に存在します");
+        return GENERAL_EXISTS;
+    }
+
+    if (errno == ENOENT) {
+        if (mkdir("data", 0700) == -1) {
+            log_error("ディレクトリの作成が出来ません: %s", strerror(errno));
+            return GENERAL_ERROR;
+        }
+        log_info("dataディレクトリを作成しました");
+        return GENERAL_SUCCESS;
+    }
+
+    log_error("予期せぬエラーが発生しました: %s", strerror(errno));
+    return GENERAL_ERROR;
+}
+
+int
 watch_dogs_file_check(const char* file_path) {
+    FILE *file = fopen(file_path, "r");
+
+    if (file) {
+        log_info("ファイルが既に存在します");
+        fclose(file);
+        return GENERAL_EXISTS;
+    }
+
+    if (errno == ENOENT) {
+        log_info("ファイルが存在しません");
+        return GENERAL_NOT_EXISTS;
+    }
+
+    log_error("予期せぬエラーが発生しました: %s", strerror(errno));
+    return GENERAL_ERROR;
+}
+
+int
+data_file_check(const char* file_path) {
     FILE *file = fopen(file_path, "r");
 
     if (file) {
@@ -77,6 +117,19 @@ write_json(const char* file_path,json_object_j *json) {
     return GENERAL_SUCCESS;
 }
 
+int
+write_append_txt(const char* file_path, const char* data) {
+    FILE *file = fopen(file_path, "a");
+    if (file == NULL) {
+        log_error("ファイルの作成に失敗しました: %s", strerror(errno));
+        return GENERAL_ERROR;
+    }
+
+    fprintf(file, "%s\n", data);
+    fclose(file);
+    return GENERAL_SUCCESS;
+}
+
 json_object_j*
 get_json_object(const char* file_path){
     FILE *file = fopen(file_path, "r");
@@ -117,11 +170,13 @@ get_json_object(const char* file_path){
     const cJSON* channel_id = cJSON_GetObjectItemCaseSensitive(json, "channel_id");
     const cJSON* api_key = cJSON_GetObjectItemCaseSensitive(json, "api_key");
     const cJSON* service = cJSON_GetObjectItemCaseSensitive(json, "service");
+    const cJSON* type = cJSON_GetObjectItemCaseSensitive(json, "type");
 
     json_object_j* result = malloc(sizeof(json_object_j));
     result->channel_id = strdup(cJSON_GetStringValue(channel_id));
     result->api_key = strdup(cJSON_GetStringValue(api_key));
     result->service = strdup(cJSON_GetStringValue(service));
+    result->type = strdup(cJSON_GetStringValue(type));
 
     cJSON_Delete(json);
     return result;
@@ -129,7 +184,7 @@ get_json_object(const char* file_path){
 
 static char *
 json_supporter(void) {
-
+    log_info("json_supporterを開始します");
 
      cJSON *monitor = cJSON_CreateObject();
 
@@ -149,6 +204,18 @@ json_supporter(void) {
        cJSON_Delete(monitor);
        return NULL;
    }
+
+    if (cJSON_AddStringToObject(monitor, "service", "") == NULL) {
+         log_error("serviceの追加に失敗しました");
+         cJSON_Delete(monitor);
+         return NULL;
+    }
+
+    if (cJSON_AddStringToObject(monitor, "type", "") == NULL) {
+        log_error("typeの追加に失敗しました");
+        cJSON_Delete(monitor);
+        return NULL;
+    }
 
   char *string = cJSON_Print(monitor);
    if (string == NULL) {
@@ -202,6 +269,12 @@ write_json_supporter(json_object_j *json){
 
     if (cJSON_AddStringToObject(monitor, "service", json->service) == NULL) {
         log_error("serviceの追加に失敗しました");
+        cJSON_Delete(monitor);
+        return NULL;
+    }
+
+    if (cJSON_AddStringToObject(monitor, "type", json->type) == NULL) {
+        log_error("typeの追加に失敗しました");
         cJSON_Delete(monitor);
         return NULL;
     }

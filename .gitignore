@@ -3,3 +3,7 @@ config.json
 johma_bot
 *.o
 *.json
+data*
+watch_dogs*
+.idea*
+obj*

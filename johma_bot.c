@@ -13,6 +13,7 @@ json_obj = {
     .channel_id = NULL,
     .api_key = NULL,
     .service = NULL,
+    .type = NULL
 };
 
 Vector* 
@@ -134,6 +135,7 @@ on_interaction(struct discord *client, const struct discord_interaction *event) 
        bool Chat = false;
        char* api_key = NULL;
        char* service = NULL;
+       char* type = NULL;
        u64snowflake channel_id = event->channel_id;
 
        struct discord_interaction_response defer_response = {
@@ -147,24 +149,30 @@ on_interaction(struct discord *client, const struct discord_interaction *event) 
           char *name = event->data->options->array[i].name;
           char *value = event->data->options->array[i].value;
            if (strcmp(name, "画像") == 0) {
-               Picture = (strcmp(value, "True") == true);
+               if (strcmp(value, "true") == 0) {
+                Picture = true;
+                Chat = false;
+               }
            } else if (strcmp(name, "チャット") == 0) {
-               Chat = (strcmp(value, "True") == true);
+             if (strcmp(value, "true") == 0) {
+                Chat = true;
+                Picture = false;
+               }
            } else if (strcmp(name, "api_key") == 0) {
                api_key = value;
            } else if (strcmp(name, "service") == 0) {
                service = value;
            }
        }
-
         if (Picture) {
-            log_info("Picture is true");
+            type = "Picture";
          } else if (Chat) {
-            log_info("Chat is true");
+            type = "Chat";
          } 
          
         log_info("api key: %s", api_key);
         log_info("service: %s", service);
+        log_info("type: %s", type);
 
         if (watch_dogs_dir_check() == GENERAL_ERROR) {
             log_error("watch_dogsディレクトリの作成に失敗しました");
@@ -189,6 +197,7 @@ on_interaction(struct discord *client, const struct discord_interaction *event) 
             json_obj.channel_id = channel_id;
             json_obj.api_key = api_key;
             json_obj.service = service;
+            json_obj.type = type;
 
            if (write_json(full_path, &json_obj) != GENERAL_SUCCESS) {
             log_error("JSONファイルの作成に失敗しました");
@@ -197,19 +206,23 @@ on_interaction(struct discord *client, const struct discord_interaction *event) 
         } else if (file_status == GENERAL_EXISTS)
         {
             log_info("ファイルが存在します。更新を開始します");
+            log_info("type: %s", type);
             json_obj.channel_id = channel_id;
             json_obj.api_key = strdup(api_key);
             json_obj.service = strdup(service);
+            json_obj.type = strdup(type);
 
         if (write_json(full_path, &json_obj) != GENERAL_SUCCESS) {
         free(json_obj.api_key);
         free(json_obj.service);    
+        free(json_obj.type);
         log_error("JSONファイルの更新に失敗しました");
         goto error_end;
 
         }
         free(json_obj.api_key);
         free(json_obj.service);
+        free(json_obj.type);
         log_info("JSONファイルを更新しました: %s", full_path);
         } else {
            log_error("予期せぬエラーが発生しました");
@@ -250,7 +263,58 @@ on_message_create(struct discord *client, const struct discord_message *msg) {
 
         if (channel_id == msg->channel_id) {
             log_info("チャンネルが一致しました");
-            log_info("メッセージ内容: %s", msg->content);
+
+            if(data_dir_check() == GENERAL_ERROR) {
+                log_error("dataディレクトリの作成に失敗しました");
+                return;
+            }
+
+            if (strcmp(result->type, "Chat") == 0) {
+                  size_t path_size = 0;
+            char* file_path = NULL;
+
+            log_info("メッセージを書き込みます");
+
+            path_size = pathconf(".", _PC_PATH_MAX);
+            if (path_size == -1) {
+                log_error("パスの最大長の取得に失敗しました");
+                return;
+            }
+
+            file_path = malloc(path_size);
+            if (file_path == NULL) {
+                log_error("メモリの確保に失敗しました");
+                return;
+            }
+
+            if(getcwd(file_path, path_size) == NULL) {
+                log_error("カレントディレクトリの取得に失敗しました");
+                free(file_path);
+                return;
+            }
+
+            char *full_path = malloc(path_size + 128);
+            if (full_path == NULL) {
+                log_error("メモリの確保に失敗しました");
+                free(file_path);
+                return;
+            }
+
+            snprintf(full_path, path_size + 128, "%s/data/%lu.txt", file_path, msg->channel_id);
+            log_info("作成されたファイルパス: %s", full_path);
+            free(file_path);
+
+            if (write_append_txt(full_path, msg->content) == GENERAL_ERROR) {
+                log_error("メッセージの書き込みに失敗しました");
+                free(full_path);
+                return;
+            } else {
+                log_info("メッセージを書き込みました: %s", msg->content);
+            }
+
+            free(full_path);
+            }
+          
         }
 
         free(result->api_key);

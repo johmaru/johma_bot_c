@@ -5,6 +5,7 @@ typedef struct json_object_j {
     u64snowflake *channel_id;
     char *api_key;
     char *service;
+    char *type;
 }json_object_j;
 
 #endif  // JSON_TYPE_H
