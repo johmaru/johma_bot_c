@@ -19,6 +19,8 @@
 #include <stdint.h>
 #include "include/json_type.h"
 #include "include/vector.h"
+#include "libs/writerthred.h"
+#include <pthread.h>
 
 typedef enum {
     GENERAL_NOT_EXISTS = -2,

@@ -304,14 +304,33 @@ on_message_create(struct discord *client, const struct discord_message *msg) {
             log_info("作成されたファイルパス: %s", full_path);
             free(file_path);
 
-            if (write_append_txt(full_path, msg->content) == GENERAL_ERROR) {
-                log_error("メッセージの書き込みに失敗しました");
+           if ( init_write_queue() != 0) {
+                log_error("write queueの初期化に失敗しました");
                 free(full_path);
                 return;
-            } else {
-                log_info("メッセージを書き込みました: %s", msg->content);
-            }
+           }
 
+           if (async_write(full_path, msg->content) != 0) {
+                log_error("メッセージの書き込みに失敗しました");
+                cleanup_write_queue();
+                free(full_path);
+                return;
+           }
+
+           int timeout_counter = 0;
+           const int MAX_TIMEOUT = 10;
+
+            while (!is_write_queue_empty()) {
+                sleep(1);
+                timeout_counter++;
+
+                if (is_write_queue_empty()) {
+                    log_info("write queueが空になりました");
+                    break;
+                }
+            }
+            
+            cleanup_write_queue();
             free(full_path);
             }
           

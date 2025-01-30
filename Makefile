@@ -31,7 +31,8 @@ build:
 	$(CC) -c commands/watch_dogs.c -o obj/commands/watch_dogs.o $(CFLAGS) $(INCLUDES)
 	$(CC) -c johma_bot.c -o obj/johma_bot.o $(CFLAGS) $(INCLUDES)
 	$(CC) -c cJSON.c -o obj/cJSON.o $(CFLAGS) $(INCLUDES)
-	$(CC) obj/libs/filecontroller.o obj/commands/watch_dogs.o obj/johma_bot.o obj/cJSON.o -o $(TARGET) $(CFLAGS) $(LIBS)
+	$(CC) -c libs/writerthred.c -o obj/libs/writerthred.o $(CFLAGS) $(INCLUDES)
+	$(CC) obj/libs/writerthred.o obj/libs/filecontroller.o obj/commands/watch_dogs.o obj/johma_bot.o obj/cJSON.o -o $(TARGET) $(CFLAGS) $(LIBS)
 
 run: $(TARGET)
 	./$(TARGET)
