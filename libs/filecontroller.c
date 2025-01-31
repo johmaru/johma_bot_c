@@ -250,7 +250,7 @@ write_json_supporter(json_object_j *json){
 
     // 読み取り時は文字列から数値を読み取り u64snowflake に変換する
     char buffer[21];
-    u64snowflake channel_id_value = json->channel_id;
+    u64snowflake channel_id_value = *json->channel_id;
     snprintf(buffer, sizeof(buffer), "%" PRIu64,channel_id_value);
 
     log_info("channel_id: %s", buffer);

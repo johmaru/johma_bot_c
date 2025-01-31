@@ -7,3 +7,5 @@ data*
 watch_dogs*
 .idea*
 obj*
+build*
+.cache*

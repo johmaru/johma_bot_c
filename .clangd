@@ -1,0 +1,17 @@
+CompileFlags:
+  Add:
+    - "-Wall"
+    - "-Wextra"
+    - "-I${workspaceFolder}"
+    - "-I${workspaceFolder}/libs"
+    - "-I${workspaceFolder}/include"
+    - "-I/usr/include"
+    - "-pthread"
+    - "-no-pie"
+
+Index:
+  Background: Build
+
+Diagnostics:
+  ClangTidy:
+    Add: ["*"]
